@@ -4,8 +4,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Melo — Messages, made simple.</title>
-  <meta name="theme-color" content="#080808">
+  <title>Melo</title>
+  <meta name="theme-color" content="#08090c">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
     * {
       box-sizing: border-box;
@@ -13,12 +18,14 @@
 
     :root {
       color-scheme: dark;
-      --background: #080808;
-      --panel: #111111;
-      --border: #242424;
-      --text: #f5f5f5;
-      --muted: #858585;
-      --green: #65d995;
+      --background: #08090c;
+      --panel: #111318;
+      --border: #262a33;
+      --text: #f5f6f8;
+      --muted: #9298a5;
+      --blue: #0a84ff;
+      --blue-hover: #3195ff;
+      --input: #0b0d12;
     }
 
     body {
@@ -28,39 +35,14 @@
       place-items: center;
       background: var(--background);
       color: var(--text);
-      font-family: Inter, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
+      font-family: "Google Sans", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
 
     .container {
       width: 100%;
       max-width: 390px;
       padding: 28px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 38px;
-    }
-
-    .brand-icon {
-      display: grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      border-radius: 13px;
-      background: #17251c;
-      color: var(--green);
-      font-size: 24px;
-    }
-
-    .brand-name {
-      font-size: 29px;
-      font-weight: 750;
-      letter-spacing: -1.5px;
     }
 
     .card {
@@ -73,7 +55,8 @@
     h1 {
       margin: 0;
       font-size: 24px;
-      letter-spacing: -0.8px;
+      font-weight: 600;
+      letter-spacing: -0.7px;
     }
 
     .subtitle {
@@ -86,12 +69,12 @@
     .warning {
       margin-bottom: 22px;
       padding: 11px 12px;
-      border: 1px solid #353126;
+      border: 1px solid #283b52;
       border-radius: 9px;
-      background: #1c1912;
-      color: #d8c89e;
+      background: #121d2c;
+      color: #b9d7fa;
       font-size: 12px;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
     .field {
@@ -101,31 +84,31 @@
     label {
       display: block;
       margin-bottom: 8px;
-      color: #d0d0d0;
+      color: #d4d7df;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
     }
 
     input {
       width: 100%;
       height: 43px;
       padding: 0 12px;
-      border: 1px solid #303030;
+      border: 1px solid #30343e;
       border-radius: 8px;
       outline: none;
-      background: #090909;
+      background: var(--input);
       color: var(--text);
-      font: inherit;
+      font-family: inherit;
       font-size: 13px;
       transition: border-color 0.15s;
     }
 
     input:focus {
-      border-color: var(--green);
+      border-color: var(--blue);
     }
 
     input::placeholder {
-      color: #626262;
+      color: #777e8c;
     }
 
     button {
@@ -134,20 +117,17 @@
       margin-top: 5px;
       border: 0;
       border-radius: 8px;
-      background: var(--green);
-      color: #08130c;
+      background: var(--blue);
+      color: white;
+      font-family: inherit;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
-      transition: filter 0.15s, transform 0.15s;
+      transition: background 0.15s;
     }
 
     button:hover {
-      filter: brightness(1.08);
-    }
-
-    button:active {
-      transform: scale(0.99);
+      background: var(--blue-hover);
     }
 
     .switch {
@@ -163,9 +143,14 @@
       margin: 0;
       padding: 0;
       background: none;
-      color: var(--green);
+      color: #58a6ff;
       font: inherit;
       font-weight: 600;
+    }
+
+    .switch button:hover {
+      background: none;
+      color: #8ac2ff;
     }
 
     .status {
@@ -178,9 +163,13 @@
 
     footer {
       margin-top: 23px;
-      color: #555;
+      color: #606674;
       font-size: 11px;
       text-align: center;
+    }
+
+    [hidden] {
+      display: none !important;
     }
 
     @media (max-width: 480px) {
@@ -196,32 +185,28 @@
 </head>
 <body>
   <main class="container">
-    <div class="brand">
-      <div class="brand-icon">m</div>
-      <div class="brand-name">melo</div>
-    </div>
-
     <section class="card">
       <h1 id="heading">Create your account</h1>
+
       <p class="subtitle" id="subtitle">
         A little place for you and your people.
       </p>
 
       <div class="warning" id="warning">
         <strong>Privacy tip:</strong> Don't use your real name.
-        Choose a display name your friends will recognize.
+        Choose a username your friends will recognize.
       </div>
 
       <form id="authForm">
         <div class="field">
-          <label for="displayName">Display name</label>
+          <label for="displayName">Username</label>
           <input
             id="displayName"
             name="displayName"
             type="text"
-            placeholder="What should friends call you?"
+            placeholder="Enter your username."
             maxlength="24"
-            autocomplete="nickname"
+            autocomplete="username"
             required
           >
         </div>
@@ -283,6 +268,7 @@
         : "A little place for you and your people.";
 
       warning.hidden = isSignIn;
+
       submitButton.textContent = isSignIn
         ? "Sign in"
         : "Create account";
@@ -298,6 +284,10 @@
       password.placeholder = isSignIn
         ? "Enter your password"
         : "Create a password";
+
+      password.minLength = isSignIn ? 1 : 8;
+
+      displayName.placeholder = "Enter your username.";
 
       status.textContent = isSignIn
         ? "Sign in will work once accounts are connected."
