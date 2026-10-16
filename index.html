@@ -130,6 +130,11 @@
       background: var(--blue-hover);
     }
 
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
     .switch {
       margin: 23px 0 0;
       color: var(--muted);
@@ -159,6 +164,7 @@
       font-size: 12px;
       line-height: 1.5;
       text-align: center;
+      overflow-wrap: anywhere;
     }
 
     footer {
@@ -205,7 +211,10 @@
             name="displayName"
             type="text"
             placeholder="Enter your username."
+            minlength="3"
             maxlength="24"
+            pattern="[a-zA-Z0-9_]+"
+            title="Use 3–24 letters, numbers, or underscores."
             autocomplete="username"
             required
           >
@@ -235,7 +244,7 @@
         <button type="button" id="switchMode">Sign in</button>
       </p>
 
-      <p class="status" id="status" role="status">
+      <p class="status" id="status" role="status" aria-live="polite">
         Your Melo number comes next.
       </p>
     </section>
@@ -243,7 +252,11 @@
     <footer>melo · just you and your people.</footer>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    const SUPABASE_URL = "https://udpfctfddyfdugyszoig.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_deaxiyrXPKaZkIzT1L6g5g_DDT487sK";
+
     const form = document.getElementById("authForm");
     const heading = document.getElementById("heading");
     const subtitle = document.getElementById("subtitle");
@@ -255,6 +268,24 @@
     const status = document.getElementById("status");
 
     let isSignIn = false;
+    let supabaseClient = null;
+
+    if (
+      window.supabase &&
+      SUPABASE_URL !== "YOUR_PROJECT_URL" &&
+      SUPABASE_PUBLISHABLE_KEY !== "YOUR_PUBLISHABLE_KEY"
+    ) {
+      supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+      );
+
+      status.textContent =
+        "Supabase connected. Account setup is the next step.";
+    } else {
+      status.textContent =
+        "Add your Supabase project details to connect Melo.";
+    }
 
     switchMode.addEventListener("click", () => {
       isSignIn = !isSignIn;
@@ -287,18 +318,22 @@
 
       password.minLength = isSignIn ? 1 : 8;
 
-      displayName.placeholder = "Enter your username.";
-
-      status.textContent = isSignIn
-        ? "Sign in will work once accounts are connected."
-        : "Your Melo number comes next.";
+      status.textContent = supabaseClient
+        ? "Ready to connect your account."
+        : "Add your Supabase project details to connect Melo.";
     });
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
+      if (!supabaseClient) {
+        status.textContent =
+          "Supabase isn't configured yet. Check your project URL and publishable key.";
+        return;
+      }
+
       status.textContent =
-        "The interface is ready. Account creation will be connected next.";
+        "Supabase is connected, but account creation and sign-in still need to be implemented.";
     });
   </script>
 </body>
