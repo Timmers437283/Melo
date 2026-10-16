@@ -12,9 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     :root {
       color-scheme: dark;
@@ -77,9 +75,7 @@
       line-height: 1.6;
     }
 
-    .field {
-      margin-bottom: 17px;
-    }
+    .field { margin-bottom: 17px; }
 
     label {
       display: block;
@@ -100,16 +96,10 @@
       color: var(--text);
       font-family: inherit;
       font-size: 13px;
-      transition: border-color 0.15s;
     }
 
-    input:focus {
-      border-color: var(--blue);
-    }
-
-    input::placeholder {
-      color: #777e8c;
-    }
+    input:focus { border-color: var(--blue); }
+    input::placeholder { color: #777e8c; }
 
     button {
       width: 100%;
@@ -123,12 +113,9 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
     }
 
-    button:hover {
-      background: var(--blue-hover);
-    }
+    button:hover { background: var(--blue-hover); }
 
     button:disabled {
       opacity: 0.6;
@@ -174,21 +161,15 @@
       text-align: center;
     }
 
-    [hidden] {
-      display: none !important;
-    }
+    [hidden] { display: none !important; }
 
     @media (max-width: 480px) {
-      .container {
-        padding: 18px;
-      }
-
-      .card {
-        padding: 24px;
-      }
+      .container { padding: 18px; }
+      .card { padding: 24px; }
     }
   </style>
 </head>
+
 <body>
   <main class="container">
     <section class="card">
@@ -270,21 +251,15 @@
     let isSignIn = false;
     let supabaseClient = null;
 
-    if (
-      window.supabase &&
-      SUPABASE_URL !== "YOUR_PROJECT_URL" &&
-      SUPABASE_PUBLISHABLE_KEY !== "YOUR_PUBLISHABLE_KEY"
-    ) {
+    if (window.supabase) {
       supabaseClient = window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_PUBLISHABLE_KEY
       );
 
-      status.textContent =
-        "Supabase connected. Account setup is the next step.";
+      status.textContent = "Ready to create your Melo account.";
     } else {
-      status.textContent =
-        "Add your Supabase project details to connect Melo.";
+      status.textContent = "Melo couldn't load its connection. Refresh the page.";
     }
 
     switchMode.addEventListener("click", () => {
@@ -317,23 +292,98 @@
         : "Create a password";
 
       password.minLength = isSignIn ? 1 : 8;
-
-      status.textContent = supabaseClient
-        ? "Ready to connect your account."
-        : "Add your Supabase project details to connect Melo.";
+      status.textContent = isSignIn
+        ? "Sign in with your username and password."
+        : "Create your Melo account.";
     });
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       if (!supabaseClient) {
-        status.textContent =
-          "Supabase isn't configured yet. Check your project URL and publishable key.";
+        status.textContent = "Melo couldn't connect. Refresh and try again.";
         return;
       }
 
-      status.textContent =
-        "Supabase is connected, but account creation and sign-in still need to be implemented.";
+      const username = displayName.value.trim();
+      const enteredPassword = password.value;
+
+      if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+        status.textContent =
+          "Use 3–24 letters, numbers, or underscores for your username.";
+        return;
+      }
+
+      if (!isSignIn && enteredPassword.length < 8) {
+        status.textContent = "Your password must be at least 8 characters.";
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = isSignIn ? "Signing in..." : "Creating account...";
+      status.textContent = "Connecting securely to Melo...";
+
+      try {
+        const { data, error } = await supabaseClient.functions.invoke(
+          "melo-auth",
+          {
+            body: {
+              action: isSignIn ? "signin" : "signup",
+              username,
+              password: enteredPassword
+            }
+          }
+        );
+
+        if (error) {
+          console.error("Melo authentication error:", error);
+          throw new Error(
+            "Couldn't reach Melo authentication. Check the Edge Function settings."
+          );
+        }
+
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+
+        if (!data?.session?.access_token || !data?.session?.refresh_token) {
+          throw new Error("Melo didn't receive a login session. Please try again.");
+        }
+
+        const { error: sessionError } = await supabaseClient.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+
+        if (sessionError) {
+          throw new Error("Your session couldn't be saved. Please try again.");
+        }
+
+        const { data: profile, error: profileError } = await supabaseClient
+          .from("profiles")
+          .select("username, melo_number")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profileError || !profile) {
+          status.textContent =
+            "You're signed in, but your Melo profile isn't ready yet. Try refreshing.";
+          return;
+        }
+
+        heading.textContent = "You're in, " + profile.username;
+        subtitle.textContent = "Your Melo account is ready.";
+        warning.hidden = true;
+        form.hidden = true;
+        switchMode.parentElement.hidden = true;
+        status.textContent = "Your Melo number: " + profile.melo_number;
+      } catch (error) {
+        console.error("Melo sign-in error:", error);
+        status.textContent = error.message || "Something went wrong. Please try again.";
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = isSignIn ? "Sign in" : "Create account";
+      }
     });
   </script>
 </body>
