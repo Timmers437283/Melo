@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,6 +23,9 @@
       --blue: #0a84ff;
       --blue-hover: #3195ff;
       --input: #0b0d12;
+      --error: #ff7b72;
+      --secondary: #1b1e26;
+      --secondary-hover: #242832;
     }
 
     body {
@@ -33,7 +35,7 @@
       place-items: center;
       background: var(--background);
       color: var(--text);
-      font-family: "Google Sans", Arial, sans-serif;
+      font-family: "Google Sans", "Product Sans", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -55,6 +57,7 @@
       font-size: 24px;
       font-weight: 600;
       letter-spacing: -0.7px;
+      overflow-wrap: anywhere;
     }
 
     .subtitle {
@@ -122,6 +125,14 @@
       cursor: wait;
     }
 
+    button.secondary {
+      background: var(--secondary);
+      color: #d4d7df;
+      border: 1px solid #30343e;
+    }
+
+    button.secondary:hover { background: var(--secondary-hover); }
+
     .switch {
       margin: 23px 0 0;
       color: var(--muted);
@@ -154,6 +165,29 @@
       overflow-wrap: anywhere;
     }
 
+    .status.error { color: var(--error); }
+
+    .number-box {
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--input);
+    }
+
+    .number-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .number-value {
+      margin-top: 4px;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
     footer {
       margin-top: 23px;
       color: #606674;
@@ -173,60 +207,75 @@
 <body>
   <main class="container">
     <section class="card">
-      <h1 id="heading">Create your account</h1>
 
-      <p class="subtitle" id="subtitle">
-        A little place for you and your people.
-      </p>
+      <!-- SIGNED-OUT VIEW: sign up / sign in -->
+      <div id="authView">
+        <h1 id="heading">Create your account</h1>
 
-      <div class="warning" id="warning">
-        <strong>Privacy tip:</strong> Don't use your real name.
-        Choose a username your friends will recognize.
+        <p class="subtitle" id="subtitle">
+          A little place for you and your people.
+        </p>
+
+        <div class="warning" id="warning">
+          <strong>Privacy tip:</strong> Don't use your real name.
+          Choose a username your friends will recognize.
+        </div>
+
+        <form id="authForm" novalidate>
+          <div class="field">
+            <label for="displayName">Username</label>
+            <input
+              id="displayName"
+              name="displayName"
+              type="text"
+              placeholder="Enter your username."
+              maxlength="24"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              required
+            >
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Create a password"
+              maxlength="128"
+              autocomplete="new-password"
+              required
+            >
+          </div>
+
+          <button type="submit" id="submitButton">
+            Create account
+          </button>
+        </form>
+
+        <p class="switch">
+          <span id="switchText">Already have an account?</span>
+          <button type="button" id="switchMode">Sign in</button>
+        </p>
       </div>
 
-      <form id="authForm">
-        <div class="field">
-          <label for="displayName">Username</label>
-          <input
-            id="displayName"
-            name="displayName"
-            type="text"
-            placeholder="Enter your username."
-            minlength="3"
-            maxlength="24"
-            pattern="[a-zA-Z0-9_]+"
-            title="Use 3–24 letters, numbers, or underscores."
-            autocomplete="username"
-            required
-          >
+      <!-- SIGNED-IN VIEW -->
+      <div id="homeView" hidden>
+        <h1 id="homeHeading">You're in</h1>
+        <p class="subtitle">Your Melo account is ready.</p>
+
+        <div class="number-box">
+          <div class="number-label">Your Melo number</div>
+          <div class="number-value" id="meloNumber">—</div>
         </div>
 
-        <div class="field">
-          <label for="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Create a password"
-            minlength="8"
-            maxlength="128"
-            autocomplete="new-password"
-            required
-          >
-        </div>
-
-        <button type="submit" id="submitButton">
-          Create account
-        </button>
-      </form>
-
-      <p class="switch">
-        Already have an account?
-        <button type="button" id="switchMode">Sign in</button>
-      </p>
+        <button type="button" class="secondary" id="signOutButton">Sign out</button>
+      </div>
 
       <p class="status" id="status" role="status" aria-live="polite">
-        Your Melo number comes next.
+        Loading...
       </p>
     </section>
 
@@ -235,111 +284,201 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // These two values are safe to keep in frontend code.
+    // NEVER put the service-role key here.
     const SUPABASE_URL = "https://udpfctfddyfdugyszoig.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_deaxiyrXPKaZkIzT1L6g5g_DDT487sK";
 
+    const authView = document.getElementById("authView");
+    const homeView = document.getElementById("homeView");
     const form = document.getElementById("authForm");
     const heading = document.getElementById("heading");
     const subtitle = document.getElementById("subtitle");
     const warning = document.getElementById("warning");
-    const displayName = document.getElementById("displayName");
-    const password = document.getElementById("password");
+    const usernameInput = document.getElementById("displayName");
+    const passwordInput = document.getElementById("password");
     const submitButton = document.getElementById("submitButton");
     const switchMode = document.getElementById("switchMode");
-    const status = document.getElementById("status");
+    const switchText = document.getElementById("switchText");
+    const statusEl = document.getElementById("status");
+    const homeHeading = document.getElementById("homeHeading");
+    const meloNumberEl = document.getElementById("meloNumber");
+    const signOutButton = document.getElementById("signOutButton");
 
     let isSignIn = false;
     let supabaseClient = null;
 
-    if (window.supabase) {
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("error", isError);
+    }
+
+    function showAuthView() {
+      homeView.hidden = true;
+      authView.hidden = false;
+      setStatus(
+        isSignIn
+          ? "Sign in with your username and password."
+          : "Create your Melo account."
+      );
+    }
+
+    function showHomeView(profile) {
+      authView.hidden = true;
+      homeView.hidden = false;
+      homeHeading.textContent = "You're in, " + profile.username;
+      meloNumberEl.textContent = profile.melo_number;
+      setStatus("");
+    }
+
+    // Read the signed-in user's profile (username + Melo number).
+    async function loadProfile(userId) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data, error } = await supabaseClient
+          .from("profiles")
+          .select("username, melo_number")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Profile lookup error:", error);
+        } else if (data) {
+          return data;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+      return null;
+    }
+
+    // Turn a failed Edge Function call into a readable message,
+    // and log the real details to the browser console for debugging.
+    async function explainFunctionError(error) {
+      const name = error?.name || "";
+
+      if (name === "FunctionsHttpError") {
+        const response = error.context;
+        let details = null;
+        try {
+          details = await response.clone().json();
+        } catch (_) {}
+
+        console.error(
+          "melo-auth responded with status", response?.status,
+          "body:", details
+        );
+
+        if (details?.error) return details.error;
+
+        if (response?.status === 401) {
+          return "Melo's sign-in service rejected the request (401). " +
+                 "In Supabase, make sure Verify JWT is turned off for melo-auth.";
+        }
+        return "Melo authentication failed (status " + (response?.status ?? "unknown") + ").";
+      }
+
+      if (name === "FunctionsFetchError") {
+        console.error("melo-auth network/CORS error:", error);
+        return "Couldn't reach Melo. Check your connection and try again.";
+      }
+
+      console.error("melo-auth error:", error);
+      return "Melo authentication is unavailable right now. Please try again.";
+    }
+
+    // ----- Start up -----
+    async function init() {
+      if (!window.supabase) {
+        setStatus("Melo couldn't load its connection. Refresh the page.", true);
+        return;
+      }
+
       supabaseClient = window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_PUBLISHABLE_KEY
       );
 
-      status.textContent = "Ready to create your Melo account.";
-    } else {
-      status.textContent = "Melo couldn't load its connection. Refresh the page.";
+      // If the person is already signed in from an earlier visit, skip the form.
+      try {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data?.session?.user) {
+          const profile = await loadProfile(data.session.user.id);
+          if (profile) {
+            showHomeView(profile);
+            return;
+          }
+          await supabaseClient.auth.signOut();
+        }
+      } catch (error) {
+        console.error("Session restore error:", error);
+      }
+
+      showAuthView();
     }
 
+    // ----- Switch between create account / sign in -----
     switchMode.addEventListener("click", () => {
       isSignIn = !isSignIn;
 
-      heading.textContent = isSignIn
-        ? "Welcome back"
-        : "Create your account";
-
+      heading.textContent = isSignIn ? "Welcome back" : "Create your account";
       subtitle.textContent = isSignIn
         ? "Pick up where you left off."
         : "A little place for you and your people.";
 
       warning.hidden = isSignIn;
+      submitButton.textContent = isSignIn ? "Sign in" : "Create account";
+      switchText.textContent = isSignIn
+        ? "New to Melo?"
+        : "Already have an account?";
+      switchMode.textContent = isSignIn ? "Create an account" : "Sign in";
 
-      submitButton.textContent = isSignIn
-        ? "Sign in"
-        : "Create account";
+      passwordInput.autocomplete = isSignIn ? "current-password" : "new-password";
+      passwordInput.placeholder = isSignIn ? "Enter your password" : "Create a password";
 
-      switchMode.textContent = isSignIn
-        ? "Create an account"
-        : "Sign in";
-
-      password.autocomplete = isSignIn
-        ? "current-password"
-        : "new-password";
-
-      password.placeholder = isSignIn
-        ? "Enter your password"
-        : "Create a password";
-
-      password.minLength = isSignIn ? 1 : 8;
-      status.textContent = isSignIn
-        ? "Sign in with your username and password."
-        : "Create your Melo account.";
+      setStatus(
+        isSignIn
+          ? "Sign in with your username and password."
+          : "Create your Melo account."
+      );
     });
 
+    // ----- Submit the form -----
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       if (!supabaseClient) {
-        status.textContent = "Melo couldn't connect. Refresh and try again.";
+        setStatus("Melo couldn't connect. Refresh and try again.", true);
         return;
       }
 
-      const username = displayName.value.trim();
-      const enteredPassword = password.value;
+      const username = usernameInput.value.trim();
+      const enteredPassword = passwordInput.value;
 
       if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
-        status.textContent =
-          "Use 3–24 letters, numbers, or underscores for your username.";
+        setStatus("Use 3–24 letters, numbers, or underscores for your username.", true);
         return;
       }
 
-      if (!isSignIn && enteredPassword.length < 8) {
-        status.textContent = "Your password must be at least 8 characters.";
+      if (enteredPassword.length < 8 || enteredPassword.length > 128) {
+        setStatus("Your password must be 8–128 characters.", true);
         return;
       }
 
       submitButton.disabled = true;
       submitButton.textContent = isSignIn ? "Signing in..." : "Creating account...";
-      status.textContent = "Connecting securely to Melo...";
+      setStatus("Connecting securely to Melo...");
 
       try {
-        const { data, error } = await supabaseClient.functions.invoke(
-          "melo-auth",
-          {
-            body: {
-              action: isSignIn ? "signin" : "signup",
-              username,
-              password: enteredPassword
-            }
+        const { data, error } = await supabaseClient.functions.invoke("melo-auth", {
+          body: {
+            action: isSignIn ? "signin" : "signup",
+            username,
+            password: enteredPassword
           }
-        );
+        });
 
         if (error) {
-          console.error("Melo authentication error:", error);
-          throw new Error(
-            "Couldn't reach Melo authentication. Check the Edge Function settings."
-          );
+          throw new Error(await explainFunctionError(error));
         }
 
         if (data?.error) {
@@ -356,35 +495,46 @@
         });
 
         if (sessionError) {
+          console.error("setSession error:", sessionError);
           throw new Error("Your session couldn't be saved. Please try again.");
         }
 
-        const { data: profile, error: profileError } = await supabaseClient
-          .from("profiles")
-          .select("username, melo_number")
-          .eq("id", data.user.id)
-          .single();
+        const profile = await loadProfile(data.user.id);
 
-        if (profileError || !profile) {
-          status.textContent =
-            "You're signed in, but your Melo profile isn't ready yet. Try refreshing.";
+        if (!profile) {
+          setStatus(
+            "You're signed in, but your Melo profile isn't ready yet. Try refreshing.",
+            true
+          );
           return;
         }
 
-        heading.textContent = "You're in, " + profile.username;
-        subtitle.textContent = "Your Melo account is ready.";
-        warning.hidden = true;
-        form.hidden = true;
-        switchMode.parentElement.hidden = true;
-        status.textContent = "Your Melo number: " + profile.melo_number;
+        passwordInput.value = "";
+        showHomeView(profile);
       } catch (error) {
         console.error("Melo sign-in error:", error);
-        status.textContent = error.message || "Something went wrong. Please try again.";
+        setStatus(error.message || "Something went wrong. Please try again.", true);
       } finally {
         submitButton.disabled = false;
         submitButton.textContent = isSignIn ? "Sign in" : "Create account";
       }
     });
+
+    // ----- Sign out -----
+    signOutButton.addEventListener("click", async () => {
+      signOutButton.disabled = true;
+      try {
+        await supabaseClient.auth.signOut();
+      } catch (error) {
+        console.error("Sign-out error:", error);
+      }
+      signOutButton.disabled = false;
+      usernameInput.value = "";
+      passwordInput.value = "";
+      showAuthView();
+    });
+
+    init();
   </script>
 </body>
 </html>
